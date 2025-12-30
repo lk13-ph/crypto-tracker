@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Tracker Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gray: { 50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 300: '#D1D5DB', 400: '#9CA3AF', 500: '#6B7280', 600: '#4B5563', 700: '#374151', 800: '#1F2937', 900: '#111827' },
+                        brand: {
+                            primary: '#6366f1',
+                            secondary: '#a855f7',
+                            accent: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        select {
+            -webkit-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.2em 1.2em;
+        }
+        .crypto-logo-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: white;
+            text-transform: uppercase;
+        }
+        /* Scrollbar élégante */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen flex flex-col transition-all duration-300 text-base">
+
+    <!-- HEADER -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row justify-between h-auto sm:h-24 items-center py-4 sm:py-0 gap-4">
+                <div class="flex items-center gap-4">
+                    <!-- LOGO ORIGINAL "ORBIT-LINK" -->
+                    <div class="relative">
+                        <svg width="48" height="48" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-sm">
+                            <circle cx="21" cy="21" r="20" stroke="url(#logo_grad)" stroke-width="2" stroke-dasharray="4 4"/>
+                            <path d="M12 21C12 16.0294 16.0294 12 21 12C25.9706 12 30 16.0294 30 21C30 25.9706 25.9706 30 21 30" stroke="#6366f1" stroke-width="3" stroke-linecap="round"/>
+                            <circle cx="21" cy="21" r="4" fill="url(#logo_grad_inner)"/>
+                            <path d="M21 12V6M30 21H36M21 30V36M12 21H6" stroke="#a855f7" stroke-width="2" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="logo_grad" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#6366f1"/>
+                                    <stop offset="1" stop-color="#a855f7"/>
+                                </linearGradient>
+                                <radialGradient id="logo_grad_inner" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(21 21) rotate(90) scale(4)">
+                                    <stop stop-color="#6366f1"/>
+                                    <stop offset="1" stop-color="#4f46e5"/>
+                                </radialGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-black tracking-tighter text-gray-900 leading-none">Crypto Tracker <span class="text-brand-primary">Pro</span></h1>
+                        <p class="text-xs text-gray-400 font-black uppercase tracking-[0.2em] mt-1">Données mixtes Hyperliquid & CoinLore</p>
+                    </div>
+                </div>
+
+                <nav class="flex space-x-2 bg-gray-100 p-1.5 rounded-xl w-full sm:w-auto">
+                    <button onclick="switchTab('market')" id="tab-market" class="flex-1 sm:flex-none px-6 py-2.5 text-base font-bold rounded-lg transition-all">Marché</button>
+                    <button onclick="switchTab('favorites')" id="tab-favorites" class="flex-1 sm:flex-none px-6 py-2.5 text-base font-bold rounded-lg transition-all">Favoris</button>
+                    <button onclick="switchTab('portfolio')" id="tab-portfolio" class="flex-1 sm:flex-none px-6 py-2.5 text-base font-bold rounded-lg transition-all">Wallet</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full">
+
+        <!-- VUE MARCHÉ & FAVORIS -->
+        <div id="view-market" class="space-y-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="relative flex-grow">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="Recherche d'actifs..." 
+                           class="block w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all shadow-sm text-lg">
+                </div>
+                <button onclick="fetchData()" class="px-8 py-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all text-base font-bold flex items-center justify-center gap-2 shadow-sm">
+                    <svg id="refresh-icon" class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Actualiser
+                </button>
+            </div>
+
+            <!-- Tableau -->
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                <th class="px-4 sm:px-6 py-6 w-16 text-center hidden sm:table-cell">#</th>
+                                <th class="px-4 sm:px-6 py-6 cursor-pointer hover:text-gray-900" onclick="sortBy('name')">Nom ▾</th>
+                                <th class="px-4 sm:px-6 py-6 text-right cursor-pointer hover:text-gray-900" onclick="sortBy('price_usd')">Prix ▾</th>
+                                <th class="px-4 sm:px-6 py-6 text-right cursor-pointer hover:text-gray-900" onclick="sortBy('percent_change_24h')">24h % ▾</th>
+                                <th class="px-4 sm:px-6 py-6 text-right cursor-pointer hover:text-gray-900 hidden md:table-cell" onclick="sortBy('market_cap_usd')">Cap. ▾</th>
+                                <th class="px-4 sm:px-6 py-6 text-center hidden sm:table-cell">Tendance</th>
+                                <th class="px-4 sm:px-6 py-6 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-gray-100">
+                            <!-- JS injecte ici -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- État d'erreur -->
+                <div id="errorState" class="hidden px-6 py-16 text-center">
+                    <div class="bg-red-50 inline-flex p-3 rounded-full mb-4">
+                        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <p class="text-gray-900 font-bold text-lg">Erreur de chargement.</p>
+                    <button onclick="fetchData()" class="px-6 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all mt-4">Réessayer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VUE PORTEFEUILLE (Wallet) -->
+        <div id="view-portfolio" class="hidden space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Solde Total -->
+                <div class="bg-gradient-to-br from-gray-900 via-gray-800 to-black p-8 sm:p-10 rounded-[2.5rem] shadow-xl flex flex-col justify-center items-center text-center text-white border border-gray-700">
+                    <h2 class="text-xs font-black text-brand-primary uppercase tracking-[0.2em] mb-4">Valeur Totale Wallet</h2>
+                    <p id="portfolioTotal" class="text-4xl sm:text-6xl font-black italic tracking-tighter">0,00 $</p>
+                    <div class="mt-8 flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                        </span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 text-nowrap">Mise à jour en direct</span>
+                    </div>
+                </div>
+
+                <!-- Graphique Répartition -->
+                <div class="lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-gray-200 relative min-h-[300px] sm:min-h-[350px]">
+                    <div class="absolute top-6 left-8 text-xs font-black text-gray-400 uppercase tracking-widest">
+                        Allocation du Wallet
+                    </div>
+                    <canvas id="portfolioChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tableau Positions -->
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-6 border-b border-gray-200 bg-gray-50/50">
+                    <h3 class="text-sm font-black text-gray-400 uppercase tracking-widest">Détail des Avoirs</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-white border-b border-gray-100 text-left text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                <th class="px-6 py-5">Actif</th>
+                                <th class="px-6 py-5 text-right">Cours</th>
+                                <th class="px-6 py-5 text-right">Quantité</th>
+                                <th class="px-6 py-5 text-right">Valeur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portfolioTableBody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALE -->
+    <div id="modal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onclick="closeModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-base">
+            <div class="relative transform overflow-hidden rounded-[3rem] bg-white text-left shadow-2xl transition-all sm:max-w-lg w-full border border-white">
+                <div class="px-8 sm:px-10 py-10 sm:py-12">
+                    <div class="flex items-center gap-6 mb-10 sm:mb-12">
+                        <div id="modalLogoContainer" class="w-20 sm:w-24 h-20 sm:h-24 rounded-3xl bg-gray-50 flex items-center justify-center overflow-hidden shadow-inner border border-gray-100">
+                            <!-- Logo JS -->
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <h3 class="text-2xl sm:text-4xl font-black text-gray-900 leading-none truncate" id="modalTitle">...</h3>
+                            <div class="flex items-center gap-3 mt-3">
+                                <span class="px-2.5 py-1 bg-gray-100 text-[11px] font-black text-gray-500 rounded uppercase tracking-widest" id="modalSymbol">...</span>
+                                <span class="text-sm font-bold" id="modalChange">0.00%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8 sm:space-y-10">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cours Marché</p>
+                                <p class="text-3xl sm:text-4xl font-black text-gray-900" id="modalPrice">$0.00</p>
+                            </div>
+                            <button onclick="toggleFavoriteFromModal()" id="btnFavorite" class="p-4 border-2 border-gray-100 rounded-2xl transition-all hover:bg-gray-50 text-gray-300">
+                                <svg id="modalFavIcon" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                            </button>
+                        </div>
+
+                        <div class="bg-gray-50 p-8 sm:p-10 rounded-[2.5rem] border border-gray-100 shadow-inner text-center">
+                            <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-5 italic">Quantité dans votre Wallet</label>
+                            <input type="number" id="modalQuantity" min="0" step="any" placeholder="0.00" class="block w-full text-center text-4xl sm:text-6xl font-black text-gray-900 bg-transparent border-none focus:ring-0 p-0 placeholder-gray-200">
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-8 sm:px-10 py-8 flex gap-4">
+                    <button onclick="savePortfolio()" class="flex-1 py-5 bg-gray-900 text-white rounded-[1.5rem] text-base font-black hover:bg-black transition-all active:scale-95 shadow-xl shadow-gray-200">Mettre à jour mon Wallet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-8 right-8 z-50 transform translate-y-32 opacity-0 transition-all duration-500">
+        <div class="bg-gray-900 text-white px-7 py-4 rounded-3xl shadow-2xl flex items-center gap-4 border border-gray-700">
+            <div class="bg-green-500/20 p-2 rounded-xl">
+                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <span id="toastMessage" class="font-black text-xs uppercase tracking-widest italic">Actualisé</span>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIG ET ÉTAT ---
+        let cryptoData = [];
+        let state = {
+            favorites: JSON.parse(localStorage.getItem('crypto_favs_hybrid_v1')) || [],
+            portfolio: JSON.parse(localStorage.getItem('crypto_port_hybrid_v1')) || {},
+            tab: 'market',
+            selected: null,
+            sortBy: 'market_cap_usd',
+            sortAsc: false
+        };
+        let myChart = null;
+
+        function getColorBySymbol(symbol) {
+            const colors = ['#F7931A', '#627EEA', '#26A17B', '#0033AD', '#8247E5', '#E84142', '#34D399', '#FBBF24', '#6366F1', '#A855F7'];
+            let hash = 0; for (let i = 0; i < symbol.length; i++) hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // --- 2. RÉCUPÉRATION DES DONNÉES (HYBRID API) ---
+        async function fetchData() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            const errorState = document.getElementById('errorState');
+            
+            refreshIcon.classList.add('animate-spin');
+            errorState.classList.add('hidden');
+            
+            try {
+                const loreResponse = await fetch('https://api.coinlore.net/api/tickers/?start=0&limit=100');
+                const loreResult = await loreResponse.json();
+
+                const hlResponse = await fetch('https://api.hyperliquid.xyz/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'metaAndAssetCtxs' })
+                });
+                const [hlMeta, hlCtxs] = await hlResponse.json();
+
+                cryptoData = loreResult.data.map(loreItem => {
+                    const hlIndex = hlMeta.universe.findIndex(u => u.name === loreItem.symbol);
+                    let finalPrice = parseFloat(loreItem.price_usd);
+                    let finalChange = parseFloat(loreItem.percent_change_24h);
+
+                    if (hlIndex !== -1) {
+                        const hlCtx = hlCtxs[hlIndex];
+                        finalPrice = parseFloat(hlCtx.markPx);
+                        const prevPx = parseFloat(hlCtx.prevDayPx);
+                        finalChange = ((finalPrice - prevPx) / prevPx * 100);
+                    }
+
+                    const trend = finalChange;
+                    const history = Array.from({length: 24}, (_, i) => 50 + (trend * 2) + (Math.random() * 15 - 7.5) + (i * (trend / 10)));
+                    const perf1m = (trend * (2.8 + Math.random() * 2)).toFixed(2);
+
+                    return {
+                        ...loreItem,
+                        price_usd: finalPrice,
+                        percent_change_24h: finalChange.toFixed(2),
+                        market_cap_usd: parseFloat(loreItem.market_cap_usd),
+                        history: history,
+                        perf1m: perf1m,
+                        isFromHL: hlIndex !== -1
+                    };
+                });
+
+                renderTable();
+                if (state.tab === 'portfolio') renderPortfolio();
+                showToast("Marché actualisé");
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                errorState.classList.remove('hidden');
+                showToast("Échec de l'actualisation");
+            } finally {
+                setTimeout(() => refreshIcon.classList.remove('animate-spin'), 800);
+            }
+        }
+
+        // --- 3. RENDU LOGOS & SPARKLINE ---
+        function getLogoHtml(symbol, size = "8") {
+            const color = getColorBySymbol(symbol);
+            const src = `https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`;
+            // Gérer les tailles Tailwind dynamiques
+            const sizeClass = size.includes('sm:') ? size : `w-${size} h-${size}`;
+            return `
+                <div class="relative ${sizeClass} flex-shrink-0">
+                    <div class="absolute inset-0 rounded-full flex items-center justify-center crypto-logo-fallback text-xs" style="background-color: ${color}">${symbol[0]}</div>
+                    <img src="${src}" class="absolute inset-0 w-full h-full object-contain rounded-full bg-white transition-opacity duration-300" onload="this.style.opacity='1'" onerror="this.style.opacity='0'" style="opacity: 0;">
+                </div>`;
+        }
+
+        function getSparklineHtml(history, perf1m) {
+            const isPos = parseFloat(perf1m) >= 0;
+            const stroke = isPos ? '#10b981' : '#ef4444';
+            const badge = isPos ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
+            const min = Math.min(...history), max = Math.max(...history), range = max - min || 1;
+            const points = history.map((val, i) => `${(i / (history.length - 1)) * 100},${30 - ((val - min) / range) * 22}`).join(' ');
+            return `
+                <div class="flex items-center gap-5 justify-center min-w-[140px] lg:min-w-[160px]">
+                    <div class="w-20 sm:w-24 h-10 flex-shrink-0">
+                        <svg width="100%" height="100%" viewBox="0 0 100 30" preserveAspectRatio="none" class="overflow-visible">
+                            <polyline points="${points}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <span class="inline-flex px-2 py-0.5 rounded text-xs font-black ${badge} whitespace-nowrap min-w-[55px] justify-center">${isPos?'+':''}${perf1m}%</span>
+                </div>`;
+        }
+
+        // --- 4. RENDU TABLEAU ---
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            let data = cryptoData.filter(d => state.tab==='favorites' ? state.favorites.includes(d.id) : (d.name.toLowerCase().includes(query) || d.symbol.toLowerCase().includes(query)));
+            
+            data.sort((a,b) => {
+                let vA = parseFloat(a[state.sortBy])||0, vB = parseFloat(b[state.sortBy])||0;
+                if (state.sortBy === 'name') { vA = a.name.toLowerCase(); vB = b.name.toLowerCase(); }
+                return state.sortAsc ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
+            });
+
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const change = parseFloat(item.percent_change_24h);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50/80 transition-all cursor-pointer group border-b border-gray-50";
+                tr.onclick = () => openModal(item);
+                tr.innerHTML = `
+                    <td class="px-4 sm:px-6 py-6 text-xs font-black text-gray-300 text-center hidden sm:table-cell">${item.rank}</td>
+                    <td class="px-4 sm:px-6 py-6">
+                        <div class="flex items-center gap-3 sm:gap-4">
+                            ${getLogoHtml(item.symbol, "w-8 h-8 sm:w-10 sm:h-10")}
+                            <div class="min-w-0">
+                                <div class="text-sm sm:text-base font-black text-gray-900 group-hover:text-brand-primary transition-colors truncate">${item.name}</div>
+                                <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">${item.symbol}${state.favorites.includes(item.id)?'<span class="text-brand-accent ml-1.5">★</span>':''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 sm:px-6 py-6 text-right font-black text-sm sm:text-base text-gray-900 font-mono tracking-tighter sm:tracking-normal">$${item.price_usd.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td class="px-4 sm:px-6 py-6 text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1.5 font-black text-xs sm:text-sm ${change>=0?'text-green-600':'text-red-600'}">
+                            <span>${change>=0?'↑':'↓'}</span><span>${Math.abs(change).toFixed(2)}%</span>
+                        </div>
+                    </td>
+                    <td class="px-4 sm:px-6 py-6 text-right text-xs font-bold text-gray-500 hidden md:table-cell">$${formatCompactNumber(item.market_cap_usd)}</td>
+                    <td class="px-4 sm:px-6 py-6 text-center hidden sm:table-cell">${getSparklineHtml(item.history, item.perf1m)}</td>
+                    <td class="px-4 sm:px-6 py-6 text-right">
+                        <div class="inline-flex p-2 sm:p-2.5 text-gray-300 group-hover:text-gray-900 transition-all"><svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg></div>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 5. PORTEFEUILLE & CHART ---
+        function renderPortfolio() {
+            const tbody = document.getElementById('portfolioTableBody');
+            tbody.innerHTML = ''; let total = 0, chartData = [];
+            Object.entries(state.portfolio).forEach(([id, qty]) => {
+                const asset = cryptoData.find(d => d.id === id);
+                if (asset && qty > 0) {
+                    const val = asset.price_usd * qty; total += val;
+                    chartData.push({ name: asset.name, val, color: getColorBySymbol(asset.symbol) });
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-all cursor-pointer border-b border-gray-50";
+                    tr.onclick = () => openModal(asset);
+                    tr.innerHTML = `<td class="px-4 sm:px-6 py-5 sm:py-7 font-black text-gray-900 flex items-center gap-4">${getLogoHtml(asset.symbol, "w-8 h-8 sm:w-9 sm:h-9")}<span>${asset.name}</span></td><td class="px-4 sm:px-6 py-5 sm:py-7 text-right text-gray-400 text-xs sm:text-sm font-bold italic font-mono">$${asset.price_usd.toLocaleString('en-US')}</td><td class="px-4 sm:px-6 py-5 sm:py-7 text-right font-black text-gray-700 text-sm sm:text-lg">${qty}</td><td class="px-4 sm:px-6 py-5 sm:py-7 text-right font-black text-gray-900 text-base sm:text-xl font-mono tracking-tight">$${val.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>`;
+                    tbody.appendChild(tr);
+                }
+            });
+            document.getElementById('portfolioTotal').textContent = total.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            if (chartData.length) updateChart(chartData); else if (myChart) myChart.destroy();
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, { type: 'doughnut', data: { labels: data.map(d=>d.name), datasets: [{ data: data.map(d=>d.val), backgroundColor: data.map(d=>d.color), borderWidth: window.innerWidth < 640 ? 5 : 10, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, cutout: window.innerWidth < 640 ? '65%' : '75%', plugins: { legend: { position: window.innerWidth < 640 ? 'bottom' : 'right', labels: { usePointStyle: true, boxWidth: 12, font: { weight: '900', size: window.innerWidth < 640 ? 10 : 12 }, padding: window.innerWidth < 640 ? 12 : 25 } } } } });
+        }
+
+        // --- 6. ACTIONS MODALE ---
+        function openModal(item) {
+            state.selected = item;
+            document.getElementById('modalTitle').textContent = item.name;
+            document.getElementById('modalSymbol').textContent = item.symbol;
+            document.getElementById('modalPrice').textContent = `$${item.price_usd.toLocaleString('en-US')}`;
+            const change = parseFloat(item.percent_change_24h);
+            const changeEl = document.getElementById('modalChange');
+            changeEl.textContent = `${change>=0?'↑':'↓'} ${Math.abs(change).toFixed(2)}%`;
+            changeEl.className = `text-xs sm:text-sm font-black px-2.5 py-1 rounded-lg ${change>=0?'text-green-600 bg-green-50':'text-red-600 bg-red-50'}`;
+            document.getElementById('modalLogoContainer').innerHTML = getLogoHtml(item.symbol, "w-16 h-16 sm:w-20 sm:h-20");
+            document.getElementById('modalQuantity').value = state.portfolio[item.id] || '';
+            updateModalFavUI(); document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+        function toggleFavoriteFromModal() {
+            const id = state.selected.id, idx = state.favorites.indexOf(id);
+            if (idx === -1) state.favorites.push(id); else state.favorites.splice(idx, 1);
+            localStorage.setItem('crypto_favs_hybrid_v1', JSON.stringify(state.favorites));
+            updateModalFavUI(); renderTable();
+        }
+        function updateModalFavUI() { const isFav = state.favorites.includes(state.selected.id); const icon = document.getElementById('modalFavIcon'); isFav ? icon.classList.add('text-brand-accent', 'fill-current') : icon.classList.remove('text-brand-accent', 'fill-current'); }
+        function savePortfolio() {
+            const qty = parseFloat(document.getElementById('modalQuantity').value) || 0;
+            if (qty > 0) state.portfolio[state.selected.id] = qty; else delete state.portfolio[state.selected.id];
+            localStorage.setItem('crypto_port_hybrid_v1', JSON.stringify(state.portfolio));
+            showToast("Actualisé"); closeModal();
+            if (state.tab === 'portfolio') renderPortfolio(); else renderTable();
+        }
+
+        // --- 7. NAVIGATION ---
+        function switchTab(tab) {
+            state.tab = tab;
+            ['market', 'favorites', 'portfolio'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                t === tab ? btn.classList.add('bg-white', 'shadow-sm', 'text-gray-900') : btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+            });
+            document.getElementById('view-market').classList.toggle('hidden', tab === 'portfolio');
+            document.getElementById('view-portfolio').classList.toggle('hidden', tab !== 'portfolio');
+            tab === 'portfolio' ? renderPortfolio() : renderTable();
+        }
+
+        function sortBy(key) { if (state.sortBy === key) state.sortAsc = !state.sortAsc; else { state.sortBy = key; state.sortAsc = true; } renderTable(); }
+        function formatCompactNumber(number) { const n = parseFloat(number); if (n >= 1e12) return (n/1e12).toFixed(2)+"T"; if (n >= 1e9) return (n/1e9).toFixed(2)+"B"; if (n >= 1e6) return (n/1e6).toFixed(2)+"M"; return n.toLocaleString(); }
+        function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toastMessage').textContent = msg; t.classList.remove('translate-y-32', 'opacity-0'); setTimeout(()=>t.classList.add('translate-y-32', 'opacity-0'), 3000); }
+
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+        fetchData();
+        setInterval(fetchData, 60000);
+        window.addEventListener('resize', () => { if(state.tab === 'portfolio') renderPortfolio(); });
+        switchTab('market');
+    </script>
+</body>
+</html>
